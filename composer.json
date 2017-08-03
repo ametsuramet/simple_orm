@@ -16,5 +16,7 @@
             "name": "amet suramet",
             "email": "ametsuramet@gmail.com"
         }
-    ]
+    ],
+    "minimum-stability": "stable"
 }
+
