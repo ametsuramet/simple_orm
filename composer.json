@@ -1,0 +1,20 @@
+{
+    "name": "ametsuramet/simple_orm",
+    "description": "DB Wrapper for build simple orm in laravel",
+    "type": "library",
+    "require": {
+        "php": ">=5.3.0"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Amet\\SimpleORM\\": "src"
+        }
+    },
+    "authors": [
+        {
+            "name": "amet suramet",
+            "email": "ametsuramet@gmail.com"
+        }
+    ]
+}
