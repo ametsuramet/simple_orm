@@ -1,0 +1,9 @@
+<?php
+
+namespace App\ORM;
+
+use Amet\SimpleORM\BaseQuery;
+
+class DummyClass extends BaseQuery
+{
+}

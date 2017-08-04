@@ -11,6 +11,7 @@ class BaseQuery
 {
     protected $table = "";
     protected $default_key = "id";
+    private static $instance;
     private $where_params = [];
     private $data_raw = [];
     public $data = [];
@@ -26,6 +27,7 @@ class BaseQuery
     public $enable_log = false;
     public $show_deleted = false;
     public $show_deleted_only = false;
+    public $public_function = ['where','limit','deleted_only','deleted','info','orderBy','groupBy','insert','update','delete','get','first','find','last','getQueryLog','paginate'];
     
     function __construct()
     {
@@ -39,7 +41,6 @@ class BaseQuery
         }
         return $this;
     }
-
 
 
     // [ [id,1], [date, > abg] ]
@@ -95,13 +96,13 @@ class BaseQuery
 
     public function info()
     {
-        $class_name = get_class($this);
-        $class   = new \ReflectionClass($class_name);
-        $methods = $class->getMethods();
+        // $class_name = get_class($this);
+        // $class   = new \ReflectionClass($class_name);
+        // $methods = $class->getMethods();
 
-        $that = $this;
-        $this->functions = $methods;
-        return $that;
+        // $that = $this;
+        // $this->functions = $methods;
+        return $this;
     }
 
     public function orderBy($param1,$param2 = 'asc')
