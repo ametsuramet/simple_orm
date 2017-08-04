@@ -196,22 +196,11 @@ class BaseQuery
         if ($this->enable_log)
         app('db')->enableQueryLog();
         $select_params = [];
-        // $select_params[] = $this->getColumn($this->table);
 
         $db = app('db')->table($this->table);
         foreach ($this->where_params as $key => $where) {
             $db = $db->where($where[0],$where[1],$where[2]);
         }
-        // foreach ($this->hasOne_attributes as $key => $rel) {
-        //  $db = $db->join($rel[0]." as ".$rel[4],$rel[4].'.'.$rel[1], '=', $this->table.'.'.$rel[2]);
-        //  $select_params[] = $this->getColumn($rel[0],$rel[4]);
-        // }
-
-        // foreach ($this->hasMany_attributes as $key => $rel) {
-        //  $db = $db->join($rel[0],$rel[0].'.'.$rel[1], '=', $this->table.'.'.$rel[2]);
-        //  $select_params[] = $this->getColumn($rel[0],$rel[3]);
-        // }
-
         
         foreach ($this->order_attributes as $key => $order_attribute) {
             $db = $db->orderBy($order_attribute[0],$order_attribute[1]);
@@ -234,9 +223,6 @@ class BaseQuery
                 }
             }
         }
-        // $select_params =  call_user_func_array('array_merge', $select_params);
-        // $db = $db->select(app('db')->raw(implode(',',$select_params)));
-
 
         if ($this->group_attributes) {
             $db = $db->groupBy(app('db')->raw($this->group_attributes));
@@ -250,29 +236,101 @@ class BaseQuery
         $db = $db->get();
 
         $this->data_raw = $db;
-        // print_r(array_filter($select_params));
         if ($this->enable_log)
         $this->query_string = (app('db')->getQueryLog());
     }
 
+    private function sum_all_data()
+    {
+        $select_params = [];
+
+        $db = app('db')->table($this->table);
+        foreach ($this->where_params as $key => $where) {
+            $db = $db->where($where[0],$where[1],$where[2]);
+        }
+        
+        foreach ($this->order_attributes as $key => $order_attribute) {
+            $db = $db->orderBy($order_attribute[0],$order_attribute[1]);
+        }
+
+        if (count($this->limit_attributes)) {
+            $db = $db->offset($this->limit_attributes[0])->limit($this->limit_attributes[1]);
+        }
+
+        if ($this->value_default_key) {
+            $db = $db->where($this->default_key,$this->value_default_key)->limit(1);
+        }
+
+        if ($this->soft_delete) {
+            if ($this->show_deleted_only) {
+                    $db = $db->whereNotNull('deleted_at');
+            } else {
+                if (!$this->show_deleted) {
+                    $db = $db->where('deleted_at',null);
+                }
+            }
+        }
+
+        if ($this->group_attributes) {
+            $db = $db->groupBy(app('db')->raw($this->group_attributes));
+        }
+
+            $db = $db->select(app('db')->raw('count(id)'));
+
+
+        $db = array_values((array) $db->first())[0];
+        return $db;
+    }
+
     public function paginate($limit)
     {
+        $sum_data = $this->sum_all_data();
+        $currentPage = request()->get('page',1);
+        if (!$currentPage) {
+            $currentPage = 1;
+        }
+
+        $last_page = ceil($sum_data/$limit);
+        $prev_page = null;
+        $next_page = null;
+        if ($currentPage !=1) {
+            $prev_page = $currentPage - 1;
+        }
+        if ($currentPage != $last_page) {
+            $next_page = $currentPage + 1;
+        }
+
+        $from = ($currentPage - 1) * $limit + 1;
+        $to = $currentPage == $last_page ? (($currentPage - 1) * $limit)+($sum_data%$limit) : $currentPage * $limit;
+        $offset = ($currentPage - 1) * $limit;
+        $data_pagination = [
+            'total' => $sum_data,
+            "per_page" => $limit,
+            "offset" => $offset,
+            "current_page" => $currentPage,
+            "last_page" => $last_page,
+            "next_page_url" => $currentPage == $last_page ? null : request()->url()."?page=".$next_page,
+            "prev_page_url" => $currentPage == 1 ? null : request()->url()."?page=".$prev_page,
+            "from" => $from,
+            "to" => $to,
+        ];
+        $this->limit_attributes = [$offset,$limit];
         $this->execute();
 
-        $searchResults = $this->data;
-        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        // $searchResults = $this->data;
+        // $currentPage = LengthAwarePaginator::resolveCurrentPage();
 
-        $collection = new Collection($searchResults);
+        // $collection = new Collection($searchResults);
 
-        $perPage = $limit;
+        // $perPage = $limit;
 
-        $currentPageSearchResults = $collection->slice(($currentPage - 1) * $perPage, $perPage)->all();
+        // $currentPageSearchResults = $collection->slice(($currentPage - 1) * $perPage, $perPage)->all();
 
-        $paginatedSearchResults= new LengthAwarePaginator($currentPageSearchResults, count($collection), $perPage);
-        $paginatedSearchResults->setPath(request()->url());
-        $data_paginate = $paginatedSearchResults->toArray();
-        $data_paginate['data'] = array_values($data_paginate['data']);
-        return $data_paginate;
+        // $paginatedSearchResults= new LengthAwarePaginator($currentPageSearchResults, count($collection), $perPage);
+        // $paginatedSearchResults->setPath(request()->url());
+        // $data_paginate = $paginatedSearchResults->toArray();
+        $data_pagination['data'] = $this->data;
+        return $data_pagination;
     }
 
     public function insert($data)
