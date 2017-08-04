@@ -12,6 +12,7 @@ class BaseQuery
     protected $table = "";
     protected $default_key = "id";
     protected $soft_delete = false;
+    protected $show_column = [];
     private static $instance;
     private $where_params = [];
     private $data_raw = [];
@@ -28,7 +29,7 @@ class BaseQuery
     public $enable_log = false;
     public $show_deleted = false;
     public $show_deleted_only = false;
-    public $public_function = ['where','limit','deleted_only','deleted','info','orderBy','groupBy','insert','update','delete','get','first','find','last','getQueryLog','paginate'];
+    public $public_function = ['where','limit','deleted_only','deleted','info','orderBy','groupBy','insert','update','delete','get','first','find','last','getQueryLog','paginate','set_show_column'];
     
     function __construct()
     {
@@ -43,7 +44,11 @@ class BaseQuery
         return $this;
     }
 
-
+    public function set_show_column($value = [])
+    {
+        $this->show_column = $value;
+        return $this;
+    }
     // [ [id,1], [date, > abg] ]
     // [  ]
     public function where($params)
@@ -133,27 +138,27 @@ class BaseQuery
         return $this;
     }
 
-    protected function manyToMany($table,$column,$parent_column,$relation_name = null, $pivot_table)
+    protected function manyToMany($table,$column,$parent_column,$relation_name = null, $pivot_table,$show_column = [])
     {
         if (!$relation_name) {
             $relation_name = $table;
         }
         $table_alias = $table.'_'.$relation_name;
-        $this->relation_attributes[$relation_name] = ['name' => $relation_name, 'type' => 'many_to_many', 'alias' => $table_alias, 'pivot_table',$pivot_table];
-        $this->manyToMany_attributes[$relation_name] = [$table,$column,$parent_column,$relation_name,$table_alias,$pivot_table];
+        $this->relation_attributes[$relation_name] = ['name' => $relation_name, 'type' => 'many_to_many', 'alias' => $table_alias, 'pivot_table' => $pivot_table, 'show_column' => $show_column];
+        $this->manyToMany_attributes[$relation_name] = [$table,$column,$parent_column,$relation_name,$table_alias,$pivot_table,$show_column];
     }
 
-    protected function hasMany($table,$column,$parent_column,$relation_name = null)
+    protected function hasMany($table,$column,$parent_column,$relation_name = null,$show_column = [])
     {
         if (!$relation_name) {
             $relation_name = $table;
         }
         $table_alias = $table.'_'.$relation_name;
-        $this->relation_attributes[$relation_name] = ['name' => $relation_name, 'type' => 'many', 'alias' => $table_alias];
-        $this->hasMany_attributes[$relation_name] = [$table,$column,$parent_column,$relation_name,$table_alias];
+        $this->relation_attributes[$relation_name] = ['name' => $relation_name, 'type' => 'many', 'alias' => $table_alias, 'show_column' => $show_column];
+        $this->hasMany_attributes[$relation_name] = [$table,$column,$parent_column,$relation_name,$table_alias,$show_column];
     }
 
-    protected function hasOne($table,$column,$parent_column,$relation_name = null)
+    protected function hasOne($table,$column,$parent_column,$relation_name = null,$show_column = [])
     {
         if (!$relation_name) {
             $relation_name = $table;
@@ -161,16 +166,24 @@ class BaseQuery
 
         $table_alias = $table.'_'.$relation_name;
 
-        $this->relation_attributes[$relation_name] = ['name' => $relation_name, 'type' => 'one', 'alias' => $table_alias];
-        $this->hasOne_attributes[$relation_name] = [$table,$column,$parent_column,$relation_name,$table_alias];
+        $this->relation_attributes[$relation_name] = ['name' => $relation_name, 'type' => 'one', 'alias' => $table_alias, 'show_column' => $show_column];
+        $this->hasOne_attributes[$relation_name] = [$table,$column,$parent_column,$relation_name,$table_alias,$show_column];
     }
 
-    private function getColumn($table,$relation_name = null)
+    private function getColumn($table,$relation_name = null,$show_column = [])
     {
         if (!$relation_name) {
             $relation_name = $table;
         }
-        $columns = DB::select("SELECT `COLUMN_NAME` FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA` = '".env('DB_DATABASE')."' AND `TABLE_NAME`= '".$table."'");
+        $columns = app('db')->select("SELECT `COLUMN_NAME` FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA` = '".env('DB_DATABASE')."' AND `TABLE_NAME`= '".$table."'");
+        
+        if (count($show_column)) {
+            $columns = collect($columns)->filter(function($data) use ($show_column) {
+                if (in_array($data->COLUMN_NAME, $show_column))
+                return $data;
+            })->toArray();
+        }
+
 
         $data_colums = array_map(function($data) use ($table,$relation_name) {
                 return $relation_name.'.'.$data->COLUMN_NAME. ' as '.$relation_name.'_'.$data->COLUMN_NAME ; 
@@ -181,11 +194,11 @@ class BaseQuery
     private function query()
     {
         if ($this->enable_log)
-        DB::enableQueryLog();
+        app('db')->enableQueryLog();
         $select_params = [];
         // $select_params[] = $this->getColumn($this->table);
 
-        $db = DB::table($this->table);
+        $db = app('db')->table($this->table);
         foreach ($this->where_params as $key => $where) {
             $db = $db->where($where[0],$where[1],$where[2]);
         }
@@ -222,11 +235,15 @@ class BaseQuery
             }
         }
         // $select_params =  call_user_func_array('array_merge', $select_params);
-        // $db = $db->select(DB::raw(implode(',',$select_params)));
+        // $db = $db->select(app('db')->raw(implode(',',$select_params)));
 
 
         if ($this->group_attributes) {
-            $db = $db->groupBy(DB::raw($this->group_attributes));
+            $db = $db->groupBy(app('db')->raw($this->group_attributes));
+        }
+
+        if (count($this->show_column)) {
+            $db = $db->select(app('db')->raw(implode(',', $this->show_column)));
         }
 
 
@@ -235,7 +252,7 @@ class BaseQuery
         $this->data_raw = $db;
         // print_r(array_filter($select_params));
         if ($this->enable_log)
-        $this->query_string = (DB::getQueryLog());
+        $this->query_string = (app('db')->getQueryLog());
     }
 
     public function paginate($limit)
@@ -262,7 +279,7 @@ class BaseQuery
     {
         $uuid = \UUID::generate();
         $data['uuid'] = (string)$uuid;
-        DB::table($this->table)->insert($data);
+        app('db')->table($this->table)->insert($data);
         $this->value_default_key = (string)$uuid;
         $this->execute();
         return current($this->data);
@@ -270,7 +287,7 @@ class BaseQuery
 
     public function update($id,$data)
     {
-        DB::table($this->table)
+        app('db')->table($this->table)
             ->where($this->default_key, $id)
             ->update($data);
         $this->value_default_key = $id;
@@ -280,7 +297,7 @@ class BaseQuery
 
     public function delete($id)
     {
-        DB::table($this->table)->where($this->default_key, $id)->delete();
+        app('db')->table($this->table)->where($this->default_key, $id)->delete();
     }
 
     public function get()
@@ -347,7 +364,11 @@ class BaseQuery
                 if ($relation_attribute['type'] == "many") {
                     foreach ($this->hasMany_attributes as $key => $attribute) {
                         if ($relation_attribute['alias'] == $attribute[4]) {
-                            $db = DB::table($attribute[0])->where($attribute[1],$data_raw->{$attribute[2]})->get();
+                            $db = app('db')->table($attribute[0])->where($attribute[1],$data_raw->{$attribute[2]});
+                            if (count($attribute[5])) {
+                                $db = $db->select(app('db')->raw(implode(',', $attribute[5])));
+                            }
+                            $db = $db->get();
                             $data[$j][$relation_attribute['name']] = $db->toArray();
                         }
                     }
@@ -356,7 +377,11 @@ class BaseQuery
                 if ($relation_attribute['type'] == "one") {
                     foreach ($this->hasOne_attributes as $key => $attribute) {
                         if ($relation_attribute['alias'] == $attribute[4]) {
-                            $db = DB::table($attribute[0])->where($attribute[1],$data_raw->{$attribute[2]})->first();
+                            $db = app('db')->table($attribute[0])->where($attribute[1],$data_raw->{$attribute[2]});
+                            if (count($attribute[5])) {
+                                $db = $db->select(app('db')->raw(implode(',', $attribute[5])));
+                            }
+                            $db = $db->first();
                             $data[$j][$relation_attribute['name']] = (array) $db;
                         }
                     }
@@ -367,12 +392,18 @@ class BaseQuery
                         if ($relation_attribute['alias'] == $attribute[4]) {
                             // print_r($attribute);
                             // print_r($data_raw);
-                            $select = $this->getColumn($attribute[0],$attribute[4]);
+                            
                             // print_r(implode(',', $select));
-                            $db = DB::table($attribute[5][0])->where($attribute[5][1],$data_raw->{$attribute[2]})
-                                    ->leftJoin($attribute[0] .' AS '.$attribute[4],$attribute[4].'.'.$attribute[1] ,'=', $attribute[5][0].'.'.$attribute[5][2])
-                                    ->select(DB::raw(implode(',', $select)))
-                                    ->get();
+                            $db = app('db')->table($attribute[5][0])->where($attribute[5][1],$data_raw->{$attribute[2]})
+                                    ->leftJoin($attribute[0] .' AS '.$attribute[4],$attribute[4].'.'.$attribute[1] ,'=', $attribute[5][0].'.'.$attribute[5][2]);
+                            if (count($attribute[5])) {
+                                $select = $this->getColumn($attribute[0],$attribute[4],$attribute[6]);
+                            } else {
+                                $select = $this->getColumn($attribute[0],$attribute[4]);
+                            }
+                                $db = $db->select(app('db')->raw(implode(',', $select)));
+
+                            $db = $db->get();
                             // print_r($db);
                             foreach ($db as $l => $dataManyToMany) {
                                 foreach ($dataManyToMany as $m => $value) {

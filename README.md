@@ -28,6 +28,11 @@ The easiest way to create a model instance is using the simple_orm:model Artisan
 ```bash
 php artisan simple_orm:model Project
 ```
+### Command Options 
+
+```bash
+php artisan simple_orm:model Project --soft_delete=1 --methods=transactions,users --default_key=uuid --migration=1
+```
 
 All models will placed in app/ORM folder.
 
@@ -270,11 +275,21 @@ or
 
 ```
 
-#### paginate(($int) $params)
+#### paginate((int) $params)
 ```php
 // ...
 		$projects = new Project;
 		$projects = $projects->paginate($params);
+		dd($projects);
+// ...
+
+```
+
+#### set_show_column((array) $params)
+```php
+// ...
+		$projects = new Project;
+		$projects = $projects->set_show_column(['id','first_name','last_name'])->get();
 		dd($projects);
 // ...
 
@@ -292,7 +307,7 @@ or
 
 ### Relation
 
-#### hasOne($relation_table,$relation_key,$table_key,$relation_name)
+#### hasOne($relation_table,$relation_key,$table_key,$relation_name,$show_column(optional))
 ```php
 ...
 class Project extends BaseQuery
@@ -303,8 +318,20 @@ class Project extends BaseQuery
 	}
 ...
 ```
+with show_column
 
-#### hasMany($relation_table,$relation_key,$table_key,$relation_name)
+```php
+...
+class Project extends BaseQuery
+{
+	public function user()
+	{
+		$this->hasOne('users','id','user_id','user',['id','first_name','last_name']);
+	}
+...
+```
+
+#### hasMany($relation_table,$relation_key,$table_key,$relation_name,$show_column(optional))
 ```php
 ...
 class Project extends BaseQuery
@@ -315,8 +342,20 @@ class Project extends BaseQuery
 	}
 ...
 ```
+with show_column
 
-#### manyToMany($relation_table,$relation_key,$table_key,$relation_name,$pivot_table)
+```php
+...
+class Project extends BaseQuery
+{
+	public function user()
+	{
+		$this->hasOne('users','id','user_id','user',['id','first_name','last_name']);
+	}
+...
+```
+
+#### manyToMany($relation_table,$relation_key,$table_key,$relation_name,$pivot_table,$show_column(optional))
 ```php
 ...
 class Project extends BaseQuery
@@ -325,6 +364,19 @@ class Project extends BaseQuery
 	{
 		$pivot_table = ['user_projects','user_id','company_id'];
 		$this->manyToMany('users','id','user_id','user',$pivot_table);
+	}
+...
+```
+with show_column
+
+```php
+...
+class Project extends BaseQuery
+{
+	public function user()
+	{
+		$pivot_table = ['user_projects','user_id','company_id'];
+		$this->manyToMany('users','id','user_id','user',$pivot_table,['id','first_name','last_name']);
 	}
 ...
 ```

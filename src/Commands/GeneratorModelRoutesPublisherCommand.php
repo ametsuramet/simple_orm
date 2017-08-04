@@ -39,12 +39,18 @@ class GeneratorModelRoutesPublisherCommand extends Command
         $this->soft_delete = $this->option('soft_delete');
         $this->methods = $this->option('methods');
         $this->default_key = $this->option('default_key');
+        $this->migration = $this->option('migration');
         
         $template = $this->getStubPath().'/Model.stub';
         try {
             $fh = fopen($template,'r+');
 
             $content = '';
+
+            if (file_exists(app_path('ORM').'/'.ucfirst($name).'.php')) {
+                $this->error('Model already existed');
+                exit;
+            }
 
             while(!feof($fh)) {
                 $line = fgets($fh);
@@ -59,6 +65,7 @@ class GeneratorModelRoutesPublisherCommand extends Command
                     if ($this->default_key) {
                         $line = $line."\t".'protected $default_key = "'.$this->default_key.'";'.PHP_EOL;
                     }
+                    $line = $line."\t".'protected $show_column = [];'.PHP_EOL;
                     $line = $line."\t".PHP_EOL;
                     if ($this->methods) {
                         foreach (explode(',',$this->methods) as $key => $method) {
@@ -75,7 +82,13 @@ class GeneratorModelRoutesPublisherCommand extends Command
                 mkdir(app_path('ORM'),0777,true);
             }
             file_put_contents(app_path('ORM').'/'.ucfirst($name).'.php', $content);
+
             $this->info(ucfirst($name).' Models Generated');
+            if ($this->migration) {
+                $this->call('make:migration', [
+                    'name' => 'Create'.ucfirst($name).'Table', '--create' => str_plural(strtolower($name))
+                ]);
+            }
         } catch (\Exception $e) {
             $this->error($e->getMessage());
         }
@@ -106,6 +119,7 @@ class GeneratorModelRoutesPublisherCommand extends Command
             ['soft_delete', null, InputOption::VALUE_OPTIONAL, 'Soft Delete option.', null],
             ['default_key', null, InputOption::VALUE_OPTIONAL, 'Default Key option.', null],
             ['methods', null, InputOption::VALUE_OPTIONAL, 'Generate Methods option.', null],
+            ['migration', null, InputOption::VALUE_OPTIONAL, 'Generate Migration file option.', null],
         ];
  
  
