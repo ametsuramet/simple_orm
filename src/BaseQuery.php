@@ -11,6 +11,7 @@ class BaseQuery
 {
     protected $table = "";
     protected $default_key = "id";
+    protected $soft_delete = false;
     private static $instance;
     private $where_params = [];
     private $data_raw = [];
@@ -211,11 +212,13 @@ class BaseQuery
             $db = $db->where($this->default_key,$this->value_default_key)->limit(1);
         }
 
-        if ($this->show_deleted_only) {
-                $db = $db->whereNotNull('deleted_at');
-        } else {
-            if (!$this->show_deleted) {
-                $db = $db->where('deleted_at',null);
+        if ($this->soft_delete) {
+            if ($this->show_deleted_only) {
+                    $db = $db->whereNotNull('deleted_at');
+            } else {
+                if (!$this->show_deleted) {
+                    $db = $db->where('deleted_at',null);
+                }
             }
         }
         // $select_params =  call_user_func_array('array_merge', $select_params);
