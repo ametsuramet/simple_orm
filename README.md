@@ -6,8 +6,15 @@ Laravel Package alternative for Eloquent ORM.
 Begin by pulling in the package through Composer.
 
 ```bash
-composer require ametsuramet/simple_orm
+composer require ametsuramet/simple_orm:1.0.*
 ```
+
+Or add in the `require` key of `composer.json` file manually
+
+``` json
+"ametsuramet/simple_orm": "1.0.*"
+```
+
 
 
 Register the ServiceProvider in `config/app.php`
@@ -19,11 +26,18 @@ Register the ServiceProvider in `config/app.php`
 ],
 ```
 
+### For Lumen 
+Add this service provider to your `bootstrap/app.php` file.
+
+```php
+$app->register(Amet\SimpleORM\ModelBuilderServiceProvider::class);
+```
+
 
 
 ## Defining Models
 
-The easiest way to create a model instance is using the simple_orm:model Artisan command:
+The easiest way to create a model instance is using the `simple_orm:model` Artisan command:
 
 ```bash
 php artisan simple_orm:model Project
@@ -34,7 +48,7 @@ php artisan simple_orm:model Project
 php artisan simple_orm:model Project --soft_delete=1 --methods=transactions,users --default_key=uuid --migration=1
 ```
 
-All models will placed in app/ORM folder.
+All models will placed in `app/ORM` folder.
 
 ## Usage
 in your controller file:

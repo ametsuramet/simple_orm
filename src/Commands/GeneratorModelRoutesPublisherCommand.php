@@ -47,7 +47,7 @@ class GeneratorModelRoutesPublisherCommand extends Command
 
             $content = '';
 
-            if (file_exists(app_path('ORM').'/'.ucfirst($name).'.php')) {
+            if (file_exists(app()->path().'/ORM/'.ucfirst($name).'.php')) {
                 $this->error('Model already existed');
                 exit;
             }
@@ -78,10 +78,10 @@ class GeneratorModelRoutesPublisherCommand extends Command
                 }
                 $content .= $line;
             }
-            if (!file_exists(app_path('ORM'))) {
-                mkdir(app_path('ORM'),0777,true);
+            if (!file_exists(app()->path().'/ORM')) {
+                mkdir(app()->path().'/ORM',0777,true);
             }
-            file_put_contents(app_path('ORM').'/'.ucfirst($name).'.php', $content);
+            file_put_contents(app()->path().'/ORM/'.ucfirst($name).'.php', $content);
 
             $this->info(ucfirst($name).' Models Generated');
             if ($this->migration) {
