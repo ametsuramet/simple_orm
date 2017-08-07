@@ -201,7 +201,7 @@ class GeneratorModelInteractive extends Command
                         if ($table_column['unsigned'] == "Yes") {
                             $line .= '->unsigned()';
                         }
-                        if ($table_column['default']) {
+                        if ($table_column['default'] == "Yes") {
                             if ($table_column['type'] == "string") {
                                 $table_column['default_value'] = '"'.$table_column['default_value'].'"';
                             }
