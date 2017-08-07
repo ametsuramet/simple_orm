@@ -15,6 +15,8 @@ class GeneratorModelInteractive extends Command
     protected $model_name =  "";
     protected $table_name =  "";
     protected $file_name =  "";
+    protected $framework =  "laravel";
+    protected $version =  "";
     protected $table_column =  [];
     protected $default_key =  null;
     protected $migration_enable =  false;
@@ -40,6 +42,14 @@ class GeneratorModelInteractive extends Command
      */
     public function handle()
     {
+        $v = app()->version();
+        $version = explode(" ", $v);
+        $this->version = $version[0];
+        if ($version[0] == "Lumen") {
+            $this->framework = "lumen";
+            $this->version =  str_replace(")", "", str_replace("(", "", $version[1]));
+        }
+
         $this->start_command();
         
     } 
@@ -98,11 +108,6 @@ class GeneratorModelInteractive extends Command
             $this->migration_enable = true;
             $this->ask_migration_enable_value = true;
         } 
-        // $migration_enable = $this->ask('Enable Migration?', "no");
-        // if ($migration_enable != "no") {
-        //     $this->migration_enable = true;
-        //     $this->ask_migration_enable_value = true;
-        // }
     }
 
     private function ask_generate_controller()
@@ -110,11 +115,16 @@ class GeneratorModelInteractive extends Command
         if ($this->confirm('Enable Generate Controller ?'))
         {
             $this->controller_file();
+            // if ($this->confirm('Enable Admin Generate Controller ?'))
+            // {
+            //     $this->admin_controller_file();
+            // }
+            // if ($this->confirm('Enable Api Generate Controller ?'))
+            // {
+            //     $this->api_controller_file();
+            // }
         } 
-        // $generate_controller = $this->ask('Enable Generate Controller?', "no");
-        // if ($generate_controller != "no") {
-        //     $this->controller_file();
-        // }
+       
     }
 
   
@@ -125,10 +135,7 @@ class GeneratorModelInteractive extends Command
 
     private function ask_add_column()
     {
-        // $source = $this->choice(
-        //     'Add Another Column ?', 
-        //     ['Yes', 'No']
-        // );
+       
 
         if ($this->confirm('Add Another Column ?'))
         {
@@ -138,15 +145,7 @@ class GeneratorModelInteractive extends Command
             $this->migration_file();
         }
 
-        // switch ($source) {
-        //     case 'Yes':
-        //         $this->add_migration_column();
-        //         $this->ask_add_column(); 
-        //         break;
-        //     default:
-        //         $this->migration_file();
-        //         break;
-        // } 
+        
     }
   
     private function add_migration_column()
@@ -220,7 +219,6 @@ class GeneratorModelInteractive extends Command
                 $content .= $line;
                 $line_number++;
             }
-            // print_r($content);
             fclose($fh);
             file_put_contents($path.$file_name, $content);
             $this->info('Created Migration: '.$file_name);
@@ -231,6 +229,15 @@ class GeneratorModelInteractive extends Command
 
     private function controller_file()
     {
+        $route_template = "Route::resource('".str_plural(strtolower(snake_case($this->model_name)))."', '".ucfirst(camel_case($this->model_name)).'Controller'."');";
+        if ($this->framework == "lumen") {
+            $route_template = '$app->resource("'.str_plural(strtolower(snake_case($this->model_name))).'", "\App\Http\Controllers\\'.ucfirst(camel_case($this->model_name))."Controller".'");';
+        }
+        $route_path = base_path().'/routes/web.php';
+        // if (preg_match(pattern, subject))
+        if (!version_compare($this->version, '5.2')) {
+            $route_path = app_path().'/Http/routes.php';
+        }
         $template = $this->getStubPath().'/Controller.stub';
         $file_name = ucfirst(camel_case($this->model_name)).'Controller'.'.php';
         $path_controller = app()->path().'/Http/Controllers/';
@@ -247,10 +254,7 @@ class GeneratorModelInteractive extends Command
                 $content .= $line;
                 $line_number++;
             }
-            // print_r($content);
             
-            // echo $path_controller.PHP_EOL;
-            // echo $path_view.PHP_EOL;
             fclose($fh);
             if (!file_exists($path_view)) {
                 mkdir($path_view,0777,true);
@@ -266,7 +270,8 @@ class GeneratorModelInteractive extends Command
             $this->info('Created View: '.$path_view.'/'.'create.blade.php');
             $this->info('Created View: '.$path_view.'/'.'show.blade.php');
             $this->info('Created View: '.$path_view.'/'.'edit.blade.php');
-
+            file_put_contents($route_path, PHP_EOL.$route_template.PHP_EOL , FILE_APPEND | LOCK_EX);
+            $this->info('Add Route: '.$route_path);
         } catch (\Exception $e) {
             $this->error($e->getMessage());
         }
@@ -297,19 +302,7 @@ class GeneratorModelInteractive extends Command
 
     private function ask_migrate()
     {
-        // $source = $this->choice(
-        //     'Do You Want To Migrate DB ?', 
-        //     ['Yes', 'No']
-        // );
-
-        // switch ($source) {
-        //     case 'Yes':
-        //         $this->call('migrate');
-        //         break;
-        //     default:
-        //         exit;
-        //         break;
-        // } 
+        
 
         if ($this->confirm('Do You Want To Migrate DB?'))
         {
@@ -330,10 +323,7 @@ class GeneratorModelInteractive extends Command
 
     private function finish()
     {
-        // $source = $this->confirm(
-        //     'Create Another Model ?', 
-        //     ['Yes', 'No']
-        // );
+        
 
         if ($this->confirm('Create Another Model?'))
         {
@@ -342,14 +332,7 @@ class GeneratorModelInteractive extends Command
             $this->exit();
         }
 
-        // switch ($source) {
-        //     case 'Yes':
-        //         $this->start_command();
-        //         break;
-        //     default:
-        //         $this->exit();
-        //         break;
-        // } 
+       
     }
 
 }
