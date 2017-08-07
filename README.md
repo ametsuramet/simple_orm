@@ -6,7 +6,7 @@ Laravel Package alternative for Eloquent ORM.
 Begin by pulling in the package through Composer.
 
 ```bash
-composer require ametsuramet/simple_orm:1.0.*
+composer require ametsuramet/simple_orm:1.2.*
 ```
 
 Or add in the `require` key of `composer.json` file manually
