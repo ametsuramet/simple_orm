@@ -47,7 +47,7 @@ class GeneratorModelRoutesPublisherCommand extends Command
 
             $content = '';
 
-            if (file_exists(app()->path().'/ORM/'.ucfirst($name).'.php')) {
+            if (file_exists(app()->path().'/ORM/'.ucfirst(camel_case($name)).'.php')) {
                 $this->error('Model already existed');
                 exit;
             }
@@ -55,10 +55,10 @@ class GeneratorModelRoutesPublisherCommand extends Command
             while(!feof($fh)) {
                 $line = fgets($fh);
                 if (preg_match('/DummyClass/', $line)) {
-                    $line = str_replace("DummyClass", ucfirst($name), $line);
+                    $line = str_replace("DummyClass", ucfirst(camel_case($name)), $line);
                 }
                 if (preg_match('/{/', $line)) {
-                    $line = $line."\t".'protected $table = "'.str_plural(strtolower($name)).'";'.PHP_EOL;
+                    $line = $line."\t".'protected $table = "'.str_plural(strtolower(snake_case($name))).'";'.PHP_EOL;
                     if ($this->soft_delete) {
                         $line = $line."\t".'protected $soft_delete = true;'.PHP_EOL;
                     }
@@ -81,14 +81,16 @@ class GeneratorModelRoutesPublisherCommand extends Command
             if (!file_exists(app()->path().'/ORM')) {
                 mkdir(app()->path().'/ORM',0777,true);
             }
-            file_put_contents(app()->path().'/ORM/'.ucfirst($name).'.php', $content);
+            file_put_contents(app()->path().'/ORM/'.ucfirst(camel_case($name)).'.php', $content);
 
             $this->info(ucfirst($name).' Models Generated');
             if ($this->migration) {
                 $this->call('make:migration', [
-                    'name' => 'Create'.ucfirst($name).'Table', '--create' => str_plural(strtolower($name))
+                    'name' => 'Create'.ucfirst($name).'Table', '--create' => str_plural(strtolower(snake_case($name)))
                 ]);
             }
+
+            fclose($fh);
         } catch (\Exception $e) {
             $this->error($e->getMessage());
         }

@@ -4,6 +4,7 @@ namespace Amet\SimpleORM;
 
 use Illuminate\Support\ServiceProvider;
 use Amet\SimpleORM\Commands\GeneratorModelRoutesPublisherCommand;
+use Amet\SimpleORM\Commands\GeneratorModelInteractive;
 
 class ModelBuilderServiceProvider extends ServiceProvider
 {
@@ -28,8 +29,13 @@ class ModelBuilderServiceProvider extends ServiceProvider
             return new GeneratorModelRoutesPublisherCommand();
         });
 
+        $this->app->singleton('ametsuramet.simple_orm.interactive', function ($app) {
+            return new GeneratorModelInteractive();
+        });
+
         $this->commands([
-            'ametsuramet.simple_orm.model'
+            'ametsuramet.simple_orm.model',
+            'ametsuramet.simple_orm.interactive',
         ]);
     
     }
@@ -42,8 +48,8 @@ class ModelBuilderServiceProvider extends ServiceProvider
     public function provides()
     {
         return [
-
-            'ametsuramet.simple_orm.model'
+            'ametsuramet.simple_orm.model',
+            'ametsuramet.simple_orm.interactive',
         ];
     }
 }

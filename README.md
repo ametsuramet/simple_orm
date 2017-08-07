@@ -12,7 +12,7 @@ composer require ametsuramet/simple_orm:1.0.*
 Or add in the `require` key of `composer.json` file manually
 
 ``` json
-"ametsuramet/simple_orm": "1.0.*"
+"ametsuramet/simple_orm": "1.2.*"
 ```
 
 
@@ -42,6 +42,13 @@ The easiest way to create a model instance is using the `simple_orm:model` Artis
 ```bash
 php artisan simple_orm:model Project
 ```
+
+or you can use interactive mode:
+
+```bash
+php artisan simple_orm:interactive
+```
+
 ### Command Options 
 
 ```bash
@@ -309,6 +316,26 @@ or
 
 ```
 
+#### hide_relation()
+```php
+// ...
+		$projects = new Project;
+		$projects = $projects->hide_relation()->get();
+		dd($projects);
+// ...
+
+```
+
+#### count()
+```php
+// ...
+		$projects = new Project;
+		$projects = $projects->count();
+		dd($projects);
+// ...
+
+```
+
 #### getQueryLog()
 ```php
 // ...
@@ -328,7 +355,7 @@ class Project extends BaseQuery
 {
 	public function user()
 	{
-		$this->hasOne('users','id','user_id','user');
+		$this->hasOne(User:class,'id','user_id','user');
 	}
 ...
 ```
@@ -340,7 +367,7 @@ class Project extends BaseQuery
 {
 	public function user()
 	{
-		$this->hasOne('users','id','user_id','user',['id','first_name','last_name']);
+		$this->hasOne(User:class,'id','user_id','user',['id','first_name','last_name']);
 	}
 ...
 ```
@@ -352,7 +379,7 @@ class Project extends BaseQuery
 {
 	public function user()
 	{
-		$this->hasOne('users','id','user_id','user');
+		$this->hasOne(User:class,'id','user_id','user');
 	}
 ...
 ```
@@ -364,7 +391,7 @@ class Project extends BaseQuery
 {
 	public function user()
 	{
-		$this->hasOne('users','id','user_id','user',['id','first_name','last_name']);
+		$this->hasOne(User:class,'id','user_id','user',['id','first_name','last_name']);
 	}
 ...
 ```
@@ -376,8 +403,8 @@ class Project extends BaseQuery
 {
 	public function user()
 	{
-		$pivot_table = ['user_projects','user_id','company_id'];
-		$this->manyToMany('users','id','user_id','user',$pivot_table);
+		$pivot_table = [UserProject::class,'user_id','company_id'];
+		$this->manyToMany(User:class,'id','user_id','user',$pivot_table);
 	}
 ...
 ```
@@ -389,8 +416,8 @@ class Project extends BaseQuery
 {
 	public function user()
 	{
-		$pivot_table = ['user_projects','user_id','company_id'];
-		$this->manyToMany('users','id','user_id','user',$pivot_table,['id','first_name','last_name']);
+		$pivot_table = [UserProject::class,'user_id','company_id'];
+		$this->manyToMany(User:class,'id','user_id','user',$pivot_table,['id','first_name','last_name']);
 	}
 ...
 ```
