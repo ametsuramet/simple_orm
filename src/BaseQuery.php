@@ -187,6 +187,15 @@ class BaseQuery
         return $data_colums; 
     }
 
+    public function getAllColumn() 
+    {
+        $columns = app('db')->select("SELECT `COLUMN_NAME` FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA` = '".env('DB_DATABASE')."' AND `TABLE_NAME`= '".$this->table."'");
+        $data_colums =  array_map(function($data){
+                return $data->COLUMN_NAME; 
+        }, $columns);
+        return $data_colums; 
+    }
+
     public function getTableName()
     {
         return $this->table;
@@ -367,19 +376,38 @@ class BaseQuery
 
     public function insert($data)
     {
-        $uuid = \UUID::generate();
-        $data['uuid'] = (string)$uuid;
-        app('db')->table($this->table)->insert($data);
-        $this->value_default_key = (string)$uuid;
+        if (class_exists('\UUID')) {
+            $uuid = \UUID::generate();
+            $data['uuid'] = (string)$uuid;
+        }
+        
+        $insert_data = [];
+        $all_column = $this->getAllColumn();
+        foreach ($data as $key => $value) {
+            if (in_array($key, $all_column)) {
+                $insert_data[$key] = $value;
+            }
+        }
+        app('db')->table($this->table)->insert($insert_data);
+        if (class_exists('\UUID')) {
+            $this->value_default_key = (string)$uuid;
+        }
         $this->execute();
         return current($this->data);
     }
 
     public function update($id,$data)
     {
+        $insert_data = [];
+        $all_column = $this->getAllColumn();
+        foreach ($data as $key => $value) {
+            if (in_array($key, $all_column)) {
+                $insert_data[$key] = $value;
+            }
+        }
         app('db')->table($this->table)
             ->where($this->default_key, $id)
-            ->update($data);
+            ->update($insert_data);
         $this->value_default_key = $id;
         $this->execute();
         return current($this->data);
