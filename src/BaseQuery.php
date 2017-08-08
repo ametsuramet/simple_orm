@@ -175,6 +175,28 @@ class BaseQuery
         $this->hasOne_attributes[$relation_name] = [$table,$column,$parent_column,$relation_name,$table_alias,$show_column];
     }
 
+    public function getSelectedColumn() 
+    {
+        $data_colums = $this->show_column;
+        if (!count($this->show_column)) {
+            $columns = app('db')->select("SELECT `COLUMN_NAME` FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA` = '".env('DB_DATABASE')."' AND `TABLE_NAME`= '".$this->table."'");
+            $data_colums =  array_map(function($data){
+                    return $data->COLUMN_NAME; 
+            }, $columns);
+        }  
+        return $data_colums; 
+    }
+
+    public function getTableName()
+    {
+        return $this->table;
+    }
+
+    public function getDefaultKey()
+    {
+        return $this->default_key;
+    }
+
     private function getColumn($table,$relation_name = null,$show_column = [])
     {
         if (!$relation_name) {
