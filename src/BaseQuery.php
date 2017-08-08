@@ -388,6 +388,7 @@ class BaseQuery
                 $insert_data[$key] = $value;
             }
         }
+        $insert_data['created_at'] = date('Y-m-d H:i:s');
         app('db')->table($this->table)->insert($insert_data);
         if (class_exists('\UUID')) {
             $this->value_default_key = (string)$uuid;
@@ -405,6 +406,8 @@ class BaseQuery
                 $insert_data[$key] = $value;
             }
         }
+        $insert_data['updated_at'] = date('Y-m-d H:i:s');
+
         app('db')->table($this->table)
             ->where($this->default_key, $id)
             ->update($insert_data);
@@ -415,7 +418,13 @@ class BaseQuery
 
     public function delete($id)
     {
-        app('db')->table($this->table)->where($this->default_key, $id)->delete();
+        if ($this->soft_delete) {
+            app('db')->table($this->table)
+            ->where($this->default_key, $id)
+            ->update(["deleted_at" => date('Y-m-d H:i:s')]);
+        } else {
+            app('db')->table($this->table)->where($this->default_key, $id)->delete();
+        }
     }
 
     public function get()
