@@ -30,6 +30,7 @@ class BaseQuery
     public $enable_log = false;
     public $show_deleted = false;
     public $show_deleted_only = false;
+    public $data_pagination = null;
     public $public_function = ['where','limit','deleted_only','deleted','info','orderBy','groupBy','insert','update','delete','get','first','find','last','getQueryLog','paginate','set_show_column','hide_relation','count'];
     
     function __construct()
@@ -339,17 +340,16 @@ class BaseQuery
         $from = ($currentPage - 1) * $limit + 1;
         $to = $currentPage == $last_page ? (($currentPage - 1) * $limit)+($sum_data%$limit) : $currentPage * $limit;
         $offset = ($currentPage - 1) * $limit;
-        $data_pagination = [
-            'total' => $sum_data,
-            "per_page" => $limit,
-            "offset" => $offset,
-            "current_page" => $currentPage,
-            "last_page" => $last_page,
-            "next_page_url" => $currentPage == $last_page ? null : request()->url()."?page=".$next_page,
-            "prev_page_url" => $currentPage == 1 ? null : request()->url()."?page=".$prev_page,
-            "from" => $from,
-            "to" => $to,
-        ];
+        $data_pagination = new \stdClass;
+        $data_pagination->total = $sum_data;
+        $data_pagination->per_page = $limit;
+        $data_pagination->offset = $offset;
+        $data_pagination->current_page = $currentPage;
+        $data_pagination->last_page = $last_page;
+        $data_pagination->next_page_url = $currentPage == $last_page ? null : request()->url()."?page=".$next_page;
+        $data_pagination->prev_page_url = $currentPage == 1 ? null : request()->url()."?page=".$prev_page;
+        $data_pagination->from = $from;
+        $data_pagination->to = $to;
         $this->limit_attributes = [$offset,$limit];
         $this->execute();
 
@@ -365,9 +365,38 @@ class BaseQuery
         // $paginatedSearchResults= new LengthAwarePaginator($currentPageSearchResults, count($collection), $perPage);
         // $paginatedSearchResults->setPath(request()->url());
         // $data_paginate = $paginatedSearchResults->toArray();
-        $data_pagination['data'] = $this->data;
+        $data_pagination->data = $this->data;
+        // $this->data_pagination = $data_pagination;
+        // $data_pagination->render = $this->render($data_pagination);
+        $data_pagination->render = $this->getPaginationString($data_pagination->current_page, $data_pagination->total, $data_pagination->per_page, 1, "");
+
         return $data_pagination;
     }
+
+    private function render($data_pagination)
+    {
+        $paginate = '<ul class="pagination">';
+        if ($data_pagination->prev_page_url) {
+            $paginate .= '<li><a href="'.$data_pagination->prev_page_url.'">&laquo;</a></li>';
+        } else {
+            $paginate .= '<li><a href="#">&laquo;</a></li>';
+        }
+        foreach (range(1,intval($data_pagination->last_page)) as $page) {
+           $paginate .='<li><a href="?page='.$page.'">'.$page.'</a></li>';
+        }
+
+        if ($data_pagination->next_page_url) {
+            $paginate .= '<li><a href="'.$data_pagination->next_page_url.'">&raquo;</a></li>';
+        } else {
+            $paginate .= '<li><a href="#">&raquo;</a></li>';
+        }
+
+        
+        $paginate .= '</ul>';
+        return $paginate;
+    }
+
+    
 
     public function count()
     {
@@ -526,5 +555,116 @@ class BaseQuery
         }
         // dd($data);   
         $this->data = $data;
+    }
+
+    private function getPaginationString($page = 1, $totalitems, $limit = 15, $adjacents = 1, $targetpage = "/", $pagestring = "?page=", $margin = "10px", $padding = "10px")
+    {       
+    //defaults
+    if(!$adjacents) $adjacents = 1;
+    if(!$limit) $limit = 15;
+    if(!$page) $page = 1;
+    // if(!$targetpage) $targetpage = "/";
+    
+    //other vars
+    $prev = $page - 1;                                  //previous page is page - 1
+    $next = $page + 1;                                  //next page is page + 1
+    $lastpage = ceil($totalitems / $limit);             //lastpage is = total items / items per page, rounded up.
+    $lpm1 = $lastpage - 1;                              //last page minus 1
+    
+    /* 
+        Now we apply our rules and draw the pagination object. 
+        We're actually saving the code to a variable in case we want to draw it more than once.
+    */
+    $pagination = "";
+        if($lastpage > 1)
+        {   
+            $pagination .= "<div class=\"pagination\"";
+            if($margin || $padding)
+            {
+                $pagination .= " style=\"";
+                if($margin)
+                    $pagination .= "margin: $margin;";
+                if($padding)
+                    $pagination .= "padding: $padding;";
+                $pagination .= "\"";
+            }
+            $pagination .= ">";
+
+            //previous button
+            if ($page > 1) 
+                $pagination .= "<a href=\"$targetpage$pagestring$prev\">&laquo; prev</a>";
+            else
+                $pagination .= "<span class=\"disabled\">&laquo; prev</span>";    
+            
+            //pages 
+            if ($lastpage < 7 + ($adjacents * 2))   //not enough pages to bother breaking it up
+            {   
+                for ($counter = 1; $counter <= $lastpage; $counter++)
+                {
+                    if ($counter == $page)
+                        $pagination .= "<span class=\"current\">$counter</span>";
+                    else
+                        $pagination .= "<a href=\"" . $targetpage . $pagestring . $counter . "\">$counter</a>";                 
+                }
+            }
+            elseif($lastpage >= 7 + ($adjacents * 2))   //enough pages to hide some
+            {
+                //close to beginning; only hide later pages
+                if($page < 1 + ($adjacents * 3))        
+                {
+                    for ($counter = 1; $counter < 4 + ($adjacents * 2); $counter++)
+                    {
+                        if ($counter == $page)
+                            $pagination .= "<span class=\"current\">$counter</span>";
+                        else
+                            $pagination .= "<a href=\"" . $targetpage . $pagestring . $counter . "\">$counter</a>";                 
+                    }
+                    $pagination .= "<span class=\"elipses\">...</span>";
+                    $pagination .= "<a href=\"" . $targetpage . $pagestring . $lpm1 . "\">$lpm1</a>";
+                    $pagination .= "<a href=\"" . $targetpage . $pagestring . $lastpage . "\">$lastpage</a>";       
+                }
+                //in middle; hide some front and some back
+                elseif($lastpage - ($adjacents * 2) > $page && $page > ($adjacents * 2))
+                {
+                    $pagination .= "<a href=\"" . $targetpage . $pagestring . "1\">1</a>";
+                    $pagination .= "<a href=\"" . $targetpage . $pagestring . "2\">2</a>";
+                    $pagination .= "<span class=\"elipses\">...</span>";
+                    for ($counter = $page - $adjacents; $counter <= $page + $adjacents; $counter++)
+                    {
+                        if ($counter == $page)
+                            $pagination .= "<span class=\"current\">$counter</span>";
+                        else
+                            $pagination .= "<a href=\"" . $targetpage . $pagestring . $counter . "\">$counter</a>";                 
+                    }
+                    $pagination .= "...";
+                    $pagination .= "<a href=\"" . $targetpage . $pagestring . $lpm1 . "\">$lpm1</a>";
+                    $pagination .= "<a href=\"" . $targetpage . $pagestring . $lastpage . "\">$lastpage</a>";       
+                }
+                //close to end; only hide early pages
+                else
+                {
+                    $pagination .= "<a href=\"" . $targetpage . $pagestring . "1\">1</a>";
+                    $pagination .= "<a href=\"" . $targetpage . $pagestring . "2\">2</a>";
+                    $pagination .= "<span class=\"elipses\">...</span>";
+                    for ($counter = $lastpage - (1 + ($adjacents * 3)); $counter <= $lastpage; $counter++)
+                    {
+                        if ($counter == $page)
+                            $pagination .= "<span class=\"current\">$counter</span>";
+                        else
+                            $pagination .= "<a href=\"" . $targetpage . $pagestring . $counter . "\">$counter</a>";                 
+                    }
+                }
+            }
+            
+            //next button
+            if ($page < $counter - 1) 
+                $pagination .= "<a href=\"" . $targetpage . $pagestring . $next . "\">next &raquo;</a>";
+            else
+                $pagination .= "<span class=\"disabled\">next &raquo;</span>";
+            $pagination .= "</div>\n";
+        }
+    
+        return $pagination;
+
     }
 }

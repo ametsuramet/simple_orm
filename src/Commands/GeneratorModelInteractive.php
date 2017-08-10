@@ -10,7 +10,7 @@ use Symfony\Component\Console\Input\InputOption;
 class GeneratorModelInteractive extends Command
 {
 
-    protected $soft_delete =  0;
+    protected $soft_delete =  false;
     protected $methods =  "";
     protected $model_name =  "";
     protected $table_name =  "";
@@ -18,7 +18,7 @@ class GeneratorModelInteractive extends Command
     protected $framework =  "laravel";
     protected $version =  "";
     protected $table_column =  [];
-    protected $default_key =  null;
+    protected $default_key =  false;
     protected $migration_enable =  false;
     protected $ask_migration_enable_value =  false;
     /**
@@ -87,18 +87,16 @@ class GeneratorModelInteractive extends Command
 
     private function ask_soft_delete()
     {
-        $soft_delete = $this->ask('use soft delete (blank if not supplied) ?', false);
-        if ($soft_delete) {
+        if ($this->confirm('use soft delete?'))
+        {
             $this->soft_delete = true;
         }
     }
 
     private function ask_default_key()
     {
-        $default_key = $this->ask('Default key (blank if not supplied) ?', false);
-        if ($default_key) {
-            $this->default_key = $default_key;
-        }   
+        $default_key = ($this->ask('Default key (blank if not supplied) ?', false));
+        $this->default_key = $default_key;
     }
 
     private function ask_migration_enable()
@@ -171,9 +169,16 @@ class GeneratorModelInteractive extends Command
 
         $column["default"] = $this->choice("is Column has default value ?", ["Yes","No"]);
         if ($column["default"] == "Yes" || $column["default"] != "No") {
-            $column["default_value"] = $this->ask("Add Column Default value ?",null);
+            if ($column['type'] == "text" || $column['type'] == "mediumText" || $column['type'] == "longText") {
+                $column["default_value"] = null;
+            } else {
+                $column["default_value"] = $this->ask("Add Column Default value ?",null);
+            }
         }
-        $column["nullable_column"] = $this->choice("is Nullable Column ?", ["Yes","No"]);
+        if ($column['type'] == "text" || $column['type'] == "mediumText" || $column['type'] == "longText") {
+        } else{
+            $column["nullable_column"] = $this->choice("is Nullable Column ?", ["Yes","No"]);
+        }
         $this->table_column[] = $column;
     }
 
